@@ -1,0 +1,133 @@
+/* 見本（第52回全日本オセロ選手権 結果）と同じ色・部品。トップの大会一覧のぶんを追加 */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --line:#dfe4dd; --fg:#18201b; --muted:#5d6b62;
+  --board:#1d6b47; --board-soft:#e3efe7; --disc:#141815; --disc-ring:#9aa69e; --gold:#a8791a;
+  --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101512; --surface:#18201b; --line:#2a352e; --fg:#e8eee9; --muted:#9aa89f;
+  --board:#4fb07f; --board-soft:#1d2e24; --disc:#e8eee9; --disc-ring:#56645b; --gold:#d6a640; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101512; --surface:#18201b; --line:#2a352e; --fg:#e8eee9; --muted:#9aa89f;
+  --board:#4fb07f; --board-soft:#1d2e24; --disc:#e8eee9; --disc-ring:#56645b; --gold:#d6a640; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;padding:28px 16px 48px}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--board);font-weight:700}
+.eyebrow a{color:inherit;text-decoration:none}
+.eyebrow a:hover{text-decoration:underline}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,6vw,34px);line-height:1.25;margin:0;text-wrap:balance}
+.meta{color:var(--muted);font-size:13px}
+.meta a{color:var(--board)}
+h2{font-family:var(--f-display);font-size:19px;margin:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* 上位3名 */
+.final{background:var(--board);color:#fff;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.final .ttl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.final .ttl span{font-size:12px;opacity:.85}
+.champ{display:flex;flex-direction:column;gap:4px}
+.champ .nm{font-family:var(--f-display);font-size:clamp(22px,6vw,30px);font-weight:800;line-height:1.2}
+.champ .sub{font-size:12px;opacity:.85}
+.champ .discs{justify-content:flex-start;margin-top:2px}
+.podium{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid rgba(255,255,255,.25);padding-top:10px}
+.podium div{display:flex;flex-direction:column;min-width:0}
+.podium .pl{font-size:11px;letter-spacing:.1em;opacity:.8}
+.podium .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.podium .sub{font-size:12px;opacity:.85}
+.final .discs .d{border-color:rgba(255,255,255,.7)}
+.final .discs .d.w{background:#fff;border-color:#fff}
+.final .discs .d.h{background:linear-gradient(90deg,#fff 50%,transparent 50%)}
+
+/* 同じ期のほかの部門 */
+.sib{display:flex;gap:6px;flex-wrap:wrap}
+.sib a{font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);text-decoration:none}
+.sib a[aria-current="page"]{background:var(--board-soft);border-color:var(--board);color:var(--board);font-weight:700}
+
+/* タブ・絞り込み */
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;padding:8px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--board);color:#fff}
+.tools{display:flex;flex-direction:column;gap:10px}
+input[type=search]{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--fg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;padding:5px 11px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--board-soft);border-color:var(--board);color:var(--board);font-weight:700}
+button:focus-visible,input:focus-visible,a:focus-visible,.row:focus-visible{outline:2px solid var(--board);outline-offset:2px}
+
+/* 順位表 */
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.grouphead{font-size:12px;font-weight:700;color:var(--muted);padding:8px 14px;background:var(--bg);border-top:1px solid var(--line);letter-spacing:.06em}
+.grouphead:first-child{border-top:0}
+.row{display:grid;grid-template-columns:2.4em minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);cursor:pointer}
+.grouphead+.row,.list>.row:first-child{border-top:0}
+.row:hover{background:var(--board-soft)}
+.rk{font-weight:700;font-size:16px;text-align:center}
+.rk.top{color:var(--gold)}
+.who{min-width:0}
+.who .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .sub{font-size:12px;color:var(--muted)}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.wl{font-size:13px;font-weight:700}
+.discs{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.d{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--disc-ring);background:transparent}
+.d.w{background:var(--disc);border-color:var(--disc)}
+.d.h{background:linear-gradient(90deg,var(--disc) 50%,transparent 50%);border-color:var(--disc)}
+.d.n{border-style:dashed;opacity:.45}
+
+.detail{padding:4px 14px 14px;border-top:1px dashed var(--line);background:var(--bg)}
+.detail table{width:100%;border-collapse:collapse;font-size:14px}
+.detail td{padding:6px 4px;border-bottom:1px solid var(--line)}
+.detail tr:last-child td{border-bottom:0}
+.detail .r{color:var(--muted);font-size:12px;width:4.2em;white-space:nowrap}
+.detail .res{width:1.6em;font-weight:700}
+.detail .res.w{color:var(--board)}
+.detail .sc{text-align:right;white-space:nowrap;color:var(--muted);font-size:13px}
+.link{background:none;border:0;padding:0;font:inherit;color:var(--fg);text-decoration:underline;text-decoration-color:var(--disc-ring);text-underline-offset:3px;cursor:pointer;text-align:left}
+.sum{font-size:12px;color:var(--muted);padding-top:8px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.sum a{color:var(--board)}
+.up{color:var(--board);font-weight:700}
+.down{color:var(--muted)}
+
+/* 対局表 */
+.games{display:flex;flex-direction:column;gap:8px}
+.game{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.game .no{font-size:12px;color:var(--muted)}
+.side{min-width:0;display:flex;flex-direction:column}
+.side.r{text-align:right}
+.side .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side .nm.lose{font-weight:400;color:var(--muted)}
+.side .sub{font-size:11px;color:var(--muted)}
+.score{font-weight:700;font-size:17px;white-space:nowrap;display:flex;gap:4px;align-items:center}
+.score .l{color:var(--muted);font-weight:400}
+.score .dash{color:var(--muted)}
+.score .mark{font-size:14px}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+footer{font-size:12px;color:var(--muted)}
+footer a{color:var(--board)}
+
+/* トップ：大会一覧 */
+.cards{display:flex;flex-direction:column;gap:12px}
+.year{font-family:var(--f-display);font-size:17px;font-weight:800;margin:10px 0 -2px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:12px 14px 8px}
+.card .hd b{font-family:var(--f-display);font-size:18px;font-weight:800}
+.card .hd span{font-size:12px;color:var(--muted)}
+.ev{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;margin-right:6px;vertical-align:3px;background:var(--board-soft);color:var(--board)}
+.div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line);color:var(--fg);text-decoration:none}
+.div:hover{background:var(--board-soft)}
+.div .dn{font-weight:700}
+.div .dn small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.div .w1{font-size:13px;text-align:right;white-space:nowrap}
+.div .w1 em{font-style:normal;color:var(--gold);font-weight:700;margin-right:4px}
+.count{font-size:12px;color:var(--muted)}
+
+@media (max-width:480px){
+  .game{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+  .game .no{display:none}
+}
