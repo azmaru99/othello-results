@@ -35,17 +35,17 @@
   }
 
   function renderHome() {
-    document.title = 'オセロ棋戦結果';
+    document.title = 'メジャー大会戦績';
     const chip = (v, l) => `<button class="chip" data-ev="${v}" aria-pressed="${home.ev === v}">${l}</button>`;
     app.innerHTML = `
       <header>
         <div class="eyebrow">名人戦 ・ 全日本選手権 ・ 王座戦</div>
-        <h1>オセロ棋戦結果</h1>
+        <h1>メジャー大会戦績</h1>
         <div class="meta">${INDEX.length}大会（${INDEX[INDEX.length - 1].date.slice(0, 4)}〜${INDEX[0].date.slice(0, 4)}年）の順位と全対局。
           データは<a href="https://www.othello.gr.jp/rate/rate_tournaments" target="_blank" rel="noopener">日本オセロ連盟レーティング</a>から。</div>
       </header>
       <div class="tools">
-        <input type="search" id="hq" placeholder="大会名・1位の選手名・年で検索（例：2019、高梨）" value="${esc(home.q)}" aria-label="大会を検索">
+        <input type="search" id="hq" placeholder="選手名・大会名・年で検索（例：高梨 悠介、2019）" value="${esc(home.q)}" aria-label="大会を検索">
         <div class="chips">${chip('all', 'すべて')}${chip('名人戦', '名人戦')}${chip('全日本', '全日本選手権')}${chip('王座戦', '王座戦')}</div>
       </div>
       <div class="cards" id="cards"></div>
@@ -59,20 +59,63 @@
     renderCards();
   }
 
+  // 検索用に名前をそろえる（空白を無視、髙→高 など）
+  const norm = s => String(s).normalize('NFKC').replace(/\s+/g, '').replace(/髙/g, '高').replace(/﨑/g, '崎').toLowerCase();
+  let PEOPLE = null; // 大会ID → [{i, name, key, rank, w, l, d}]
+  function people() {
+    if (PEOPLE) return PEOPLE;
+    PEOPLE = {};
+    for (const t of INDEX) {
+      PEOPLE[t.id] = DATA.t[t.id].players.map((p, i) => {
+        const g = p[7].filter(Boolean);
+        return { i, name: p[1], key: norm(p[1]) + '|' + norm(p[9] || ''), rank: p[0],
+          w: g.filter(x => x[0] === '○').length, l: g.filter(x => x[0] === '×').length, d: g.filter(x => x[0] === '△').length };
+      });
+    }
+    return PEOPLE;
+  }
+
   function renderCards() {
-    const q = home.q.trim().toLowerCase();
-    const list = groups().filter(g => (home.ev === 'all' || g.event === home.ev) &&
-      (!q || [title(g), g.date, ...g.items.flatMap(t => [t.name, t.division, t.winner])].join(' ').toLowerCase().includes(q)));
+    const q = norm(home.q);
+    const P = q ? people() : null;
+    const names = new Set();
+    let shown = 0;
     let h = '', year = '';
-    for (const g of list) {
+    for (const g of groups()) {
+      if (home.ev !== 'all' && g.event !== home.ev) continue;
+      const groupHit = !q || norm(title(g) + g.date + g.date.replace(/-/g, '.')).includes(q);
+      const items = [];
+      for (const t of g.items) {
+        const hits = q ? P[t.id].filter(p => p.key.includes(q)) : [];
+        hits.forEach(p => names.add(p.name));
+        if (groupHit || hits.length || norm(t.name + t.division).includes(q)) items.push({ t, hits });
+      }
+      if (!items.length) continue;
+      shown += items.length;
       const y = g.date.slice(0, 4);
       if (y !== year) { h += `<div class="year">${y}</div>`; year = y; }
-      h += `<section class="card"><div class="hd"><b><span class="ev">${esc(g.event === '全日本' ? '全日本' : g.event)}</span>${esc(title(g))}</b><span>${ymd(g.items[g.items.length - 1].date)}</span></div>
-        ${g.items.map(t => `<a class="div" href="#/t/${t.id}">
-          <span class="dn">${esc(t.division)}<small>${t.count}名・${t.rounds}回戦</small></span>
-          <span class="w1"><em>1位</em>${esc(t.winner)}</span></a>`).join('')}</section>`;
+      h += `<section class="card"><div class="hd"><b><span class="ev">${esc(g.event)}</span>${esc(title(g))}</b><span>${ymd(g.items[g.items.length - 1].date)}</span></div>
+        ${items.map(({ t, hits }) => {
+          const right = hits.length
+            ? hits.slice(0, 3).map(p => `<span class="hit"><em>${p.rank ? p.rank + '位' : '−'}</em>${esc(p.name)} <small>${p.w}勝${p.l}敗${p.d ? p.d + '分' : ''}</small></span>`).join('') + (hits.length > 3 ? `<small>ほか${hits.length - 3}名</small>` : '')
+            : `<span><em>1位</em>${esc(t.winner)}</span>`;
+          const href = hits.length === 1 ? `#/t/${t.id}/p/${hits[0].i}` : `#/t/${t.id}`;
+          return `<a class="div" href="${href}"><span class="dn">${esc(t.division)}<small>${t.count}名・${t.rounds}回戦</small></span><span class="w1">${right}</span></a>`;
+        }).join('')}</section>`;
     }
-    document.getElementById('cards').innerHTML = h || '<p class="empty">該当する大会がありません。</p>';
+    // 選手名で検索したときのまとめ
+    let head = '';
+    if (q && names.size) {
+      const list = [...names];
+      head = `<p class="found">${list.length === 1 ? `<b>${esc(list[0])}</b> の出場大会：${shown}大会` : `該当する選手 ${list.length}名・${shown}大会`}</p>`;
+      if (list.length > 1 && list.length <= 20)
+        head += `<div class="chips">${list.map(n => `<button class="chip" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
+    }
+    const el = document.getElementById('cards');
+    el.innerHTML = head + (h || '<p class="empty">該当する大会がありません。</p>');
+    el.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => {
+      home.q = b.dataset.name; document.getElementById('hq').value = home.q; renderCards();
+    }));
   }
 
   /* ---------------- 大会ページ ---------------- */
@@ -86,7 +129,7 @@
       const w = games.filter(g => g && g.res === '○').length;
       const l = games.filter(g => g && g.res === '×').length;
       const d = games.filter(g => g && g.res === '△').length;
-      return { i, rank: p[0], name: p[1], abbr: p[2], region: p[3], dan: p[4], pid: p[5], rate: p[6], games, w, l, d, score: w + d / 2 };
+      return { i, rank: p[0], name: p[1], abbr: p[2], region: p[3], dan: p[4], pid: p[5], rate: p[6], first: !!p[8], old: p[9] || '', games, w, l, d, score: w + d / 2 };
     });
     return t;
   }
@@ -102,10 +145,10 @@
     return og && og.st != null ? og.st : null;
   }
 
-  async function renderTournament(id) {
+  async function renderTournament(id, openIdx) {
     app.innerHTML = '<p class="empty">読み込み中…</p>';
     if (!cache[id]) cache[id] = prep(DATA.t[id]);
-    if (!T || T.id !== id) { view.tab = 'stand'; view.q = ''; view.wins = 'all'; view.round = 1; view.open = new Set(); }
+    if (!T || T.id !== id || openIdx != null) { view.tab = 'stand'; view.q = ''; view.wins = 'all'; view.round = 1; view.open = new Set(openIdx != null ? [openIdx] : []); }
     T = cache[id];
     document.title = `${title(T)} ${T.division === '本戦' ? '' : T.division} 結果`;
     const sibs = INDEX.filter(x => x.event === T.event && x.edition === T.edition).sort((a, b) => a.id - b.id);
@@ -137,6 +180,10 @@
     }));
     renderBody();
     window.scrollTo(0, 0);
+    if (openIdx != null) {
+      const row = document.querySelector(`.row[data-p="${openIdx}"]`);
+      if (row) { row.scrollIntoView({ block: 'start' }); row.focus({ preventScroll: true }); }
+    }
   }
 
   function renderBody() {
@@ -164,14 +211,14 @@
   function renderList() {
     const q = view.q.trim().toLowerCase();
     const list = T.P.filter(p => (view.wins === 'all' || p.score === view.wins) &&
-      (!q || [p.name, p.region, p.dan, p.abbr].join(' ').toLowerCase().includes(q)));
+      (!q || [p.name, p.old, p.region, p.dan, p.abbr].join(' ').toLowerCase().includes(q)));
     let h = '', last = null;
     for (const p of list) {
       if (p.score !== last) { h += `<div class="grouphead">${p.score}勝</div>`; last = p.score; }
       const open = view.open.has(p.i);
       h += `<div class="row" role="button" tabindex="0" aria-expanded="${open}" data-p="${p.i}">
           <span class="rk num${p.rank && p.rank <= 3 ? ' top' : ''}">${p.rank ?? ''}</span>
-          <span class="who"><div class="nm">${esc(p.name)}</div><div class="sub">${esc(sub(p))}</div></span>
+          <span class="who"><div class="nm">${esc(p.name)}${p.first ? '<span class="tag">初出場</span>' : ''}</div><div class="sub">${esc(sub(p))}</div></span>
           <span class="right"><span class="wl num">${wl(p)}</span>${discs(p)}</span>
         </div>${open ? detail(p) : ''}`;
     }
@@ -254,8 +301,8 @@
   async function route() {
     try {
       if (!DATA) { DATA = await getJson('results.json'); INDEX = DATA.index; }
-      const m = location.hash.match(/^#\/t\/(\d+)/);
-      if (m && INDEX.some(t => t.id === +m[1])) await renderTournament(+m[1]);
+      const m = location.hash.match(/^#\/t\/(\d+)(?:\/p\/(\d+))?/);
+      if (m && INDEX.some(t => t.id === +m[1])) await renderTournament(+m[1], m[2] != null ? +m[2] : null);
       else { T = null; renderHome(); }
     } catch (e) {
       app.innerHTML = '<p class="empty">データを読み込めませんでした。ページを再読み込みしてください。</p>';
